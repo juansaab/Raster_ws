@@ -31,11 +31,18 @@ Complete la tabla:
 
 | Integrante | github nick |
 |------------|-------------|
-|            |             |
+| Juan David Saab | @juansaab             |
 
 ## Discusión
 
 Describa los resultados obtenidos. En el caso de anti-aliasing describir las técnicas exploradas, citando las referencias.
+
+Se realizó una función de antialiasing siguiendo el concepto de multisampling con cuatro muestras por pixel. Como referencia se tomó la información del artículo [Anti Aliasing en Learn OpenGL](https://learnopengl.com/Advanced-OpenGL/Anti-Aliasing)
+
+La comparación entre un triángulo con y sin antialiasing puede apreciarse en la siguiente imagen. A la izquierda sin antialiasing y a la derecha con antialiasing.
+
+![Screenshot](example_raster.jpg)
+
 
 ## Entrega
 

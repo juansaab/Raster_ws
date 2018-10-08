@@ -11,12 +11,20 @@ Vector v1, v2, v3;
 TimingTask spinningTask;
 boolean yDirection;
 // scaling is a power of 2
-int n = 4;
+int n = 8;
+
+// Here we set the divisions for antialiasing
+int antialiasing_subdiv = 4;
+float inv_antialiasing_subdiv = (float)1/antialiasing_subdiv;
+int pow_antialiasing_subdiv = antialiasing_subdiv*antialiasing_subdiv;
 
 // 2. Hints
 boolean triangleHint = true;
 boolean gridHint = true;
 boolean debug = true;
+
+// We add a hint for the antialiasing
+boolean antialiasingHint = false;
 
 // 3. Use FX2D, JAVA2D, P2D or P3D
 String renderer = P3D;
@@ -70,17 +78,92 @@ void draw() {
   popStyle();
   popMatrix();
 }
+float orientation(Vector a, Vector b, Vector c) {
+  return ((b.x() - a.x()) *  (c.y() - a.y())) - ((b.y() - a.y()) *  (c.x() - a.x()));
+}
+
+
+void antialiasing(Vector V1, Vector V2, Vector V3, float x, float y){
+  Vector AverageColor = new Vector(255, 255, 255);
+  Vector P = new Vector(0, 0);
+  float alpha = 255;
+  for (float i = 0; i < 1; i += inv_antialiasing_subdiv){
+    for (float j = 0; j < 1; j += inv_antialiasing_subdiv){
+      P.setX(x + i + inv_antialiasing_subdiv/2);
+      P.setY(y + i + inv_antialiasing_subdiv/2);
+      float W1 = orientation(V1, V2, P);
+      float W2 = orientation(V2, V3, P);
+      float W3 = orientation(V3, V1, P);
+      float awgP = 255/((W1 + W2 + W3)*pow_antialiasing_subdiv);
+      if (W1 >= 0 && W2 >= 0 && W3 >= 0) {
+        AverageColor.setX(AverageColor.x() - W1*awgP);
+        AverageColor.setY(AverageColor.y() - W2*awgP);
+        AverageColor.setZ(AverageColor.z() - W3*awgP);
+      }
+      else{
+        alpha -= awgP;
+      }
+      if(AverageColor.matches(new Vector(255, 255, 255)))
+        noFill();
+      else
+        fill(round(AverageColor.x()), round(AverageColor.y()), round(AverageColor.z()), alpha);
+    }
+  }
+  
+}
+
+void noAntialiasing(Vector V1, Vector V2, Vector V3, float x, float y){
+  Vector AverageColor = new Vector(255, 255, 255);
+  Vector P = new Vector(x, y);
+  float W1 = orientation(V1, V2, P);
+  float W2 = orientation(V2, V3, P);
+  float W3 = orientation(V3, V1, P);
+  float awgP = 255/(W1 + W2 + W3);
+  if (W1 >= 0 && W2 >= 0 && W3 >= 0) {
+    AverageColor.setX(AverageColor.x() - W1*awgP);
+    AverageColor.setY(AverageColor.y() - W2*awgP);
+    AverageColor.setZ(AverageColor.z() - W3*awgP);
+    fill(round(AverageColor.x()), round(AverageColor.y()), round(AverageColor.z()));
+  }
+  else
+    noFill();
+}
 
 // Implement this function to rasterize the triangle.
 // Coordinates are given in the frame system which has a dimension of 2^n
 void triangleRaster() {
   // frame.location converts points from world to frame
   // here we convert v1 to illustrate the idea
+  
+  Vector V1 = frame.location(v1);
+  Vector V2 = frame.location(v2);
+  Vector V3 = frame.location(v3);
+  // frame.coordinatesOf converts from world to frame
+  // here we convert v1 to illustrate the idea
+  
+  noStroke();
+  Vector max = new Vector(round(max(V1.x(), V2.x(), V3.x())), round(max(V1.y(), V2.y(), V3.y())));
+  Vector min = new Vector(round(min(V1.x(), V2.x(), V3.x())), round(min(V1.y(), V2.y(), V3.y())));
+  
+  if (orientation(V1, V2, V3)<0)
+  {
+    V1 = frame.location(v2);
+    V2 = frame.location(v1);
+  }
   if (debug) {
     pushStyle();
     stroke(255, 255, 0, 125);
     point(round(frame.location(v1).x()), round(frame.location(v1).y()));
     popStyle();
+  }
+  for (float x = min.x(); x <= max.x(); x++){
+    for (float y = min.y(); y <= max.y(); y++) {
+      if(antialiasingHint)
+        antialiasing(V1, V2, V3, x, y);
+      else
+        noAntialiasing(V1, V2, V3, x, y);
+      rect(x, y, 1, 1);
+    }
   }
 }
 
@@ -130,4 +213,6 @@ void keyPressed() {
       spinningTask.run(20);
   if (key == 'y')
     yDirection = !yDirection;
+  if (key == 'a')
+    antialiasingHint = !antialiasingHint;
 }
